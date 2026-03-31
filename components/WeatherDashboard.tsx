@@ -191,8 +191,8 @@ export default function WeatherDashboard() {
 
   return (
     <div className={`flex flex-col min-h-screen font-sans tracking-tight transition-colors duration-300 ${!isDarkMode ? 'bg-[#f1f5f9] text-slate-900' : 'bg-[#020617] text-slate-100'}`} suppressHydrationWarning>
-      {/* Navbar */}
-      <nav className={`h-14 border-b flex items-center justify-between px-6 sticky top-0 z-[2000] backdrop-blur-xl ${!isDarkMode ? 'bg-white/95 border-slate-200' : 'bg-[#0f172a]/95 border-slate-800 shadow-lg'}`}>
+      {/* Navbar - Global Priority */}
+      <nav className={`h-14 border-b flex items-center justify-between px-6 sticky top-0 z-[4000] backdrop-blur-xl ${!isDarkMode ? 'bg-white/95 border-slate-200' : 'bg-[#0f172a]/95 border-slate-800 shadow-lg'}`}>
         <div className="flex items-center gap-6">
           <button className={`p-2 rounded transition-colors ${!isDarkMode ? 'hover:bg-slate-100 text-slate-600' : 'hover:bg-slate-800 text-slate-400'}`} onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}>
             <Menu size={20} />
@@ -217,26 +217,22 @@ export default function WeatherDashboard() {
       </nav>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* Sidebar - RWD Optimized with Escape Path */}
-        <aside className={`lg:relative fixed inset-y-0 left-0 z-[3000] flex flex-col flex-shrink-0 transition-transform duration-300 lg:translate-x-0 ${isSidebarCollapsed ? '-translate-x-full lg:w-20 lg:translate-x-0' : 'translate-x-0 lg:w-72 w-80 shadow-2xl'} ${!isDarkMode ? 'bg-white border-r border-slate-200' : 'bg-[#0f172a] border-r border-slate-800'}`}>
-           {/* Mobile Header in Sidebar for closing */}
-           <div className={`lg:hidden flex items-center justify-between px-6 h-14 border-b ${!isDarkMode ? 'border-slate-100 bg-slate-50' : 'border-slate-800 bg-slate-900/50'}`}>
-             <div className="flex items-center gap-2">
-               <Shield className="text-blue-500" size={18} />
-               <span className="text-[10px] font-black uppercase tracking-widest opacity-60">TWC_COMMAND</span>
-             </div>
-             <button onClick={() => setIsSidebarCollapsed(true)} className={`p-2 rounded-full ${!isDarkMode ? 'hover:bg-slate-200 text-slate-500' : 'hover:bg-slate-800 text-slate-400'}`}>
-               <X size={20} />
-             </button>
-           </div>
-
-           {/* Mobile Backdrop Overlay - Click outside to close */}
+        {/* Mobile Dropdown / Desktop Sidebar - RWD Refactored */}
+        <aside className={`lg:relative fixed top-14 lg:top-0 left-0 right-0 lg:right-auto z-[3500] flex flex-col transition-all duration-300 pointer-events-auto
+          ${isSidebarCollapsed ? 
+            'lg:translate-x-0 -translate-y-full lg:opacity-100 opacity-0 lg:pointer-events-auto pointer-events-none' : 
+            'lg:translate-x-0 translate-y-0 lg:opacity-100 opacity-100 shadow-2xl lg:shadow-none'
+          } 
+          ${isSidebarCollapsed ? 'lg:w-20' : 'lg:w-72 w-full'} 
+          ${!isDarkMode ? 'bg-white border-b lg:border-b-0 lg:border-r border-slate-200' : 'bg-[#0f172a] border-b lg:border-b-0 lg:border-r border-slate-800'}`}>
+           
+           {/* Mobile Backdrop Overlay */}
            {!isSidebarCollapsed && (
-             <div className="lg:hidden fixed inset-0 bg-black/60 backdrop-blur-sm z-[-1] transition-opacity" onClick={() => setIsSidebarCollapsed(true)} />
+             <div className="lg:hidden fixed top-0 inset-0 bg-black/60 backdrop-blur-sm z-[-1] transition-opacity" onClick={() => setIsSidebarCollapsed(true)} />
            )}
            
            <div 
-             className={`flex-1 flex flex-col overflow-hidden ${isSidebarCollapsed ? 'py-4 lg:items-center px-0' : 'py-6 items-stretch px-4'} scrollbar-hide overflow-y-auto`}
+             className={`flex flex-col overflow-hidden h-auto lg:h-[calc(100vh-56px)] ${isSidebarCollapsed ? 'py-4 lg:items-center px-0' : 'py-6 items-stretch px-4'} scrollbar-hide overflow-y-auto ${!isDarkMode ? 'bg-white' : 'bg-[#0f172a]'}`}
              style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}
            >
              
@@ -252,7 +248,7 @@ export default function WeatherDashboard() {
                />
                <SidebarItem 
                  icon={<Calendar size={20} />} 
-                 label="各類預報報表" 
+                 label="一週天氣預報" 
                  active={activeModule === 'forecast'} 
                  activeColor="#3b82f6"
                  isDarkMode={isDarkMode} 
@@ -261,7 +257,7 @@ export default function WeatherDashboard() {
                />
                <SidebarItem 
                  icon={<Activity size={20} />} 
-                 label="地震連動監控" 
+                 label="地震活動監控" 
                  active={activeModule === 'quake'} 
                  activeColor="#f43f5e"
                  isDarkMode={isDarkMode} 
@@ -276,7 +272,7 @@ export default function WeatherDashboard() {
         <main className={`flex-1 lg:overflow-y-auto overflow-y-visible px-5 py-6 lg:p-6 space-y-6 lg:space-y-8 ${!isDarkMode ? 'bg-[#f1f5f9]' : 'bg-[#020617]'}`}>
           {activeModule === 'weather' ? (
             <div className="max-w-full mx-auto space-y-8 animate-in fade-in duration-500">
-               <ModuleTitleBar icon={<Globe size={24} />} title="即時氣象監測總署" subTitle="STATION MONITORING CORE" statusText="SYSTEM_ONLINE" isDarkMode={isDarkMode} accent="#087f8c" onRefresh={refetch} />
+               <ModuleTitleBar icon={<Globe size={24} />} title="即時氣象監測" subTitle="STATION MONITORING CORE" statusText="SYSTEM_ONLINE" isDarkMode={isDarkMode} accent="#087f8c" onRefresh={refetch} />
                <div className={`p-1.5 rounded border flex flex-wrap gap-1.5 max-w-[380px] mx-auto md:max-w-none ${!isDarkMode ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800 shadow-xl shadow-black/40'}`}>
                   {CITIES.map(city => (
                     <button key={city.id} onClick={() => setSelectedCity(city)} className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded transition-all ${selectedCity.id === city.id ? (!isDarkMode ? 'bg-[#087f8c] text-white shadow-md' : 'bg-[#087f8c] text-white shadow-lg shadow-teal-900/40') : (!isDarkMode ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800')}`}>{city.name}</button>
@@ -308,7 +304,7 @@ export default function WeatherDashboard() {
             </div>
           ) : activeModule === 'forecast' ? (
             <div className="max-w-full mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-               <ModuleTitleBar icon={<Calendar size={24} />} title="全臺一週預報專報" subTitle="7-DAY SYNOPTIC REPORT" statusText="DATA_SYNC" isDarkMode={isDarkMode} accent="#3b82f6" />
+               <ModuleTitleBar icon={<Calendar size={24} />} title="一週天氣預報" subTitle="7-DAY SYNOPTIC REPORT" statusText="DATA_SYNC" isDarkMode={isDarkMode} accent="#0ea5e9" />
                <div className={`p-1 rounded border flex gap-1 items-center w-fit shadow-sm ${!isDarkMode ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800 shadow-black/30'}`}>
                  {REGIONS.map(r => (
                    <button key={r.id} onClick={() => setSelectedRegion(r.id)} className={`px-6 py-2 text-xs font-black uppercase tracking-widest rounded transition-all ${selectedRegion === r.id ? (!isDarkMode ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-500 text-white shadow-lg shadow-blue-900/40') : (!isDarkMode ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800')}`}>{r.name}</button>
@@ -368,7 +364,7 @@ export default function WeatherDashboard() {
             <div className="max-w-full mx-auto space-y-4 animate-in zoom-in-95 duration-500">
                <ModuleTitleBar 
                  icon={<Activity size={20} />} 
-                 title="地震災害實時監控" 
+                 title="地震活動監控" 
                  subTitle="LIVE SEISMIC COMMAND" 
                  statusText={quakeData ? 'REPORT_READY' : 'FETCHING...'}
                  isDarkMode={isDarkMode} 
@@ -456,7 +452,7 @@ export default function WeatherDashboard() {
                               <tr 
                                 key={q.id} 
                                 onClick={() => setSelectedQuakeId(q.id)}
-                                className={`cursor-pointer transition-colors group ${activeQuake?.id === q.id ? (isDarkMode ? 'bg-blue-600/20 text-blue-400 border-l-2 border-blue-500 font-black' : 'bg-blue-100/50 text-blue-700 font-black') : (isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50')}`}
+                                className={`cursor-pointer transition-colors group ${activeQuake?.id === q.id ? (isDarkMode ? 'bg-blue-600/20 text-blue-400 font-black' : 'bg-blue-100/50 text-blue-700 font-black') : (isDarkMode ? 'hover:bg-slate-800/50' : 'hover:bg-slate-50')}`}
                               >
                                 <td className="p-3 text-center">
                                   <div className={`w-2.5 h-2.5 rounded-full mx-auto ${
