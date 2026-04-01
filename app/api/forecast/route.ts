@@ -5,11 +5,8 @@ import { NextResponse } from 'next/server';
 const CWA_URL = 'https://opendata.cwa.gov.tw/api/v1/rest/datastore/F-D0047-091';
 
 function formatDate(isoStr: string): string {
-  // e.g. "2026-04-01T06:00:00+08:00"
-  const d = new Date(isoStr);
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  const dd = String(d.getDate()).padStart(2, '0');
-  return `${mm}/${dd}`;
+  // e.g. "2026-04-01T06:00:00+08:00" -> "04/01"
+  return `${isoStr.slice(5, 7)}/${isoStr.slice(8, 10)}`;
 }
 
 export async function GET() {
@@ -66,38 +63,34 @@ export async function GET() {
       });
 
       // ── Group ALL Wx slots by date, classified as day or night ──────────────
-      // Day   = T06:00 or T12:00 (today may start late)
-      // Night = T18:00
-      // We do NOT rely on array index or fixed ordering.
-
-      const daySlotMap:   Record<string, any> = {};
-      const nightSlotMap: Record<string, any> = {};
+      const dayMap:   Record<string, any> = {};
+      const nightMap: Record<string, any> = {};
 
       for (const t of (wxEl?.Time ?? [])) {
-        const st: string = t.StartTime ?? '';
-        // Extract YYYY-MM-DD from ISO string "2026-04-01T06:00:00+08:00"
-        const dateKey = st.slice(0, 10);
+        const time: string = t.StartTime ?? '';
+        const dateKey = time.slice(0, 10);
         if (!dateKey) continue;
 
-        if (st.includes('T06:00') || st.includes('T12:00')) {
-          // Prefer T06 over T12 if both somehow exist for same date
-          if (!daySlotMap[dateKey] || st.includes('T06:00')) {
-            daySlotMap[dateKey] = t;
+        if (time.includes('T06:00')) {
+          dayMap[dateKey] = t;
+        } else if (time.includes('T12:00')) {
+          if (!dayMap[dateKey]) {
+            dayMap[dateKey] = t;
           }
-        } else if (st.includes('T18:00')) {
-          nightSlotMap[dateKey] = t;
+        } else if (time.includes('T18:00')) {
+          nightMap[dateKey] = t;
         }
       }
 
       // Collect all dates that have at least a day OR night slot, sorted
       const allDates = Array.from(
-        new Set([...Object.keys(daySlotMap), ...Object.keys(nightSlotMap)])
+        new Set([...Object.keys(dayMap), ...Object.keys(nightMap)])
       ).sort();
 
       const daily: any[] = [];
       for (const dateKey of allDates) {
-        const daySlot   = daySlotMap[dateKey];
-        const nightSlot = nightSlotMap[dateKey];
+        const daySlot   = dayMap[dateKey];
+        const nightSlot = nightMap[dateKey];
 
         // Need at least one of the two slots to emit a row
         if (!daySlot && !nightSlot) continue;
@@ -111,7 +104,7 @@ export async function GET() {
         } : { wx: '', code: '', minT: '--', maxT: '--', pop: '0' };
 
         daily.push({
-          date: formatDate(daySlot?.StartTime ?? nightSlot?.StartTime),
+          date: formatDate(dateKey), // Safer to just use dateKey + '-00T00' or simply format dateKey
           day:   makeSlot(daySlot),
           night: makeSlot(nightSlot),
         });

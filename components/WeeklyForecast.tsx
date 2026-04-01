@@ -184,11 +184,44 @@ export default function WeeklyForecast({ isDarkMode = true }: { isDarkMode?: boo
         </div>
       </div>
 
-      {/* ── Loading ── */}
+      {/* ── Loading Skeleton ── */}
       {isLoading && data.length === 0 && (
-        <div className="flex flex-col items-center justify-center h-64 gap-4">
-          <RefreshCw size={40} className="animate-spin text-blue-500" />
-          <span className="text-sm font-black tracking-widest opacity-40">FETCHING_CWA_DATA...</span>
+        <div className="w-full animate-pulse">
+          {/* Default tabs skeleton */}
+          <div className={`p-1 rounded border flex flex-wrap gap-1 items-center w-full sm:w-fit mb-6 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className={`h-8 w-14 sm:w-16 rounded ${isDarkMode ? 'bg-slate-800' : 'bg-slate-100'}`} />
+            ))}
+          </div>
+
+          {/* Desktop Table Skeleton */}
+          <div className="hidden lg:block">
+            <div className={`rounded border overflow-hidden ${isDarkMode ? 'bg-[#0a121f] border-slate-800' : 'bg-white border-slate-200'}`}>
+              <div className={`w-full h-14 border-b ${isDarkMode ? 'bg-[#0f172a] border-slate-800' : 'bg-slate-100 border-slate-200'}`} />
+              <div className="divide-y divide-slate-800/50">
+                {[...Array(6)].map((_, i) => (
+                  <div key={i} className="flex">
+                    <div className={`w-[140px] p-4 border-r ${isDarkMode ? 'border-slate-800 bg-[#050b16]' : 'border-slate-200 bg-white'}`}>
+                      <div className={`h-5 w-16 rounded ${isDarkMode ? 'bg-slate-800' : 'bg-slate-200'}`} />
+                    </div>
+                    <div className="flex-1 p-4 flex gap-4">
+                      <div className={`h-16 flex-1 rounded ${isDarkMode ? 'bg-slate-800/40' : 'bg-slate-100'}`} />
+                      <div className={`h-16 flex-1 rounded ${isDarkMode ? 'bg-slate-800/40' : 'bg-slate-100'}`} />
+                      <div className={`h-16 flex-1 rounded ${isDarkMode ? 'bg-slate-800/40' : 'bg-slate-100'}`} />
+                      <div className={`h-16 flex-1 rounded ${isDarkMode ? 'bg-slate-800/40' : 'bg-slate-100'}`} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile Card Skeleton */}
+          <div className="lg:hidden flex flex-col gap-3">
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className={`h-[72px] rounded-2xl border ${isDarkMode ? 'border-slate-800 bg-[#0f172a]' : 'border-slate-200 bg-slate-50'}`} />
+            ))}
+          </div>
         </div>
       )}
 
