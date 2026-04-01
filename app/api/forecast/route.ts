@@ -65,40 +65,55 @@ export async function GET() {
           t.ElementValue?.[0]?.ProbabilityOfPrecipitation ?? '0';
       });
 
-      // Keep only 06:00 (day) and 18:00 (night) slots from Wx
-      const wxTimes: any[] = (wxEl?.Time ?? []).filter(
-        (t: any) =>
-          t.StartTime?.includes('T06:00') || t.StartTime?.includes('T18:00')
-      );
+      // ── Group ALL Wx slots by date, classified as day or night ──────────────
+      // Day   = T06:00 or T12:00 (today may start late)
+      // Night = T18:00
+      // We do NOT rely on array index or fixed ordering.
 
-      // Pair consecutive slots: [day06, night18, day06, night18, ...]
+      const daySlotMap:   Record<string, any> = {};
+      const nightSlotMap: Record<string, any> = {};
+
+      for (const t of (wxEl?.Time ?? [])) {
+        const st: string = t.StartTime ?? '';
+        // Extract YYYY-MM-DD from ISO string "2026-04-01T06:00:00+08:00"
+        const dateKey = st.slice(0, 10);
+        if (!dateKey) continue;
+
+        if (st.includes('T06:00') || st.includes('T12:00')) {
+          // Prefer T06 over T12 if both somehow exist for same date
+          if (!daySlotMap[dateKey] || st.includes('T06:00')) {
+            daySlotMap[dateKey] = t;
+          }
+        } else if (st.includes('T18:00')) {
+          nightSlotMap[dateKey] = t;
+        }
+      }
+
+      // Collect all dates that have at least a day OR night slot, sorted
+      const allDates = Array.from(
+        new Set([...Object.keys(daySlotMap), ...Object.keys(nightSlotMap)])
+      ).sort();
+
       const daily: any[] = [];
-      for (let i = 0; i + 1 < wxTimes.length; i += 2) {
-        const daySlot   = wxTimes[i];
-        const nightSlot = wxTimes[i + 1];
+      for (const dateKey of allDates) {
+        const daySlot   = daySlotMap[dateKey];
+        const nightSlot = nightSlotMap[dateKey];
 
-        // Safety: ensure first slot is 06 and second is 18
-        if (
-          !daySlot?.StartTime?.includes('T06:00') ||
-          !nightSlot?.StartTime?.includes('T18:00')
-        ) continue;
+        // Need at least one of the two slots to emit a row
+        if (!daySlot && !nightSlot) continue;
+
+        const makeSlot = (slot: any) => slot ? {
+          wx:   slot.ElementValue?.[0]?.Weather ?? '',
+          code: slot.ElementValue?.[0]?.WeatherCode ?? '',
+          minT: minTMap[slot.StartTime] ?? '--',
+          maxT: maxTMap[slot.StartTime] ?? '--',
+          pop:  popMap[slot.StartTime]  ?? '0',
+        } : { wx: '', code: '', minT: '--', maxT: '--', pop: '0' };
 
         daily.push({
-          date: formatDate(daySlot.StartTime),
-          day: {
-            wx:   daySlot.ElementValue?.[0]?.Weather ?? '',
-            code: daySlot.ElementValue?.[0]?.WeatherCode ?? '',
-            minT: minTMap[daySlot.StartTime] ?? '--',
-            maxT: maxTMap[daySlot.StartTime] ?? '--',
-            pop:  popMap[daySlot.StartTime]  ?? '0',
-          },
-          night: {
-            wx:   nightSlot.ElementValue?.[0]?.Weather ?? '',
-            code: nightSlot.ElementValue?.[0]?.WeatherCode ?? '',
-            minT: minTMap[nightSlot.StartTime] ?? '--',
-            maxT: maxTMap[nightSlot.StartTime] ?? '--',
-            pop:  popMap[nightSlot.StartTime]  ?? '0',
-          },
+          date: formatDate(daySlot?.StartTime ?? nightSlot?.StartTime),
+          day:   makeSlot(daySlot),
+          night: makeSlot(nightSlot),
         });
       }
 
