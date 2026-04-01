@@ -28,13 +28,17 @@ export async function GET() {
       // 精確掃描全臺所有地區，尋找真正的「最大震度」
       let maxIntensityRaw = '0';
       const shakingArea = item.Intensity?.ShakingArea || [];
+      const intensityOrder = ['0', '1', '2', '3', '4', '5弱', '5強', '6弱', '6強', '7'];
+      
+      const getIntensityRank = (intensityStr: string) => {
+        const clean = intensityStr.replace('級', '');
+        return intensityOrder.indexOf(clean);
+      };
+
       if (shakingArea.length > 0) {
-        // 部分 API 格式不同，遍歷獲取數值最高的震度字串 (如 5弱)
-        const areaIntensities = shakingArea.map((area: any) => area.AreaIntensity);
-        // 這邊需要自定義排序順序以獲得真正的最大值
-        const intensityOrder = ['0', '1', '2', '3', '4', '5弱', '5強', '6弱', '6強', '7'];
-        maxIntensityRaw = areaIntensities.reduce((max: string, current: string) => {
-          return intensityOrder.indexOf(current) > intensityOrder.indexOf(max) ? current : max;
+        maxIntensityRaw = shakingArea.reduce((max: string, area: any) => {
+          const current = area.AreaIntensity || '0';
+          return getIntensityRank(current) > getIntensityRank(max) ? current : max;
         }, '0');
       } else {
         maxIntensityRaw = item.Intensity?.Area?.[0]?.AreaIntensity || '0';
@@ -42,10 +46,10 @@ export async function GET() {
 
       // 計算警戒燈號等級 (1-4)
       const mag = parseFloat(info?.EarthquakeMagnitude?.MagnitudeValue || '0');
-      const intNum = parseInt(maxIntensityRaw) || 0;
+      const intNum = parseInt(maxIntensityRaw.replace('級', '')) || 0;
       let alertLevel = 1; // 綠燈 (預設)
 
-      if (mag >= 6.5 && (maxIntensityRaw.includes('6') || maxIntensityRaw === '7')) {
+      if (mag >= 6.5 && (maxIntensityRaw.includes('6') || maxIntensityRaw.includes('7'))) {
         alertLevel = 4; // 紅燈
       } else if (mag >= 6.0 && (maxIntensityRaw.includes('5') || maxIntensityRaw.includes('6'))) {
         alertLevel = 3; // 橘燈
@@ -57,11 +61,11 @@ export async function GET() {
         id: item.EarthquakeNo || 'Unknown',
         time: info?.OriginTime || '未知時間',
         magnitude: mag.toFixed(1),
-        depth: info?.EarthquakeDepth?.Value || '0.0',
+        depth: info?.FocalDepth || '0.0',
         location: epi?.Location || '未知地點',
         lat: parseFloat(epi?.EpicenterLatitude || '0'),
         lng: parseFloat(epi?.EpicenterLongitude || '0'),
-        maxIntensity: maxIntensityRaw === '0' ? '無感' : `${maxIntensityRaw}級`,
+        maxIntensity: maxIntensityRaw === '0' ? '無感' : (maxIntensityRaw.includes('級') ? maxIntensityRaw : `${maxIntensityRaw}級`),
         alertLevel: alertLevel,
         reportImage: reportImage,
         isSignificant: mag > 6.0
