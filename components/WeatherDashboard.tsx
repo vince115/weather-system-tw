@@ -14,6 +14,7 @@ import {
 import * as echarts from 'echarts';
 import ReactECharts from 'echarts-for-react';
 import DigitalClock from './DigitalClock';
+import WeeklyForecast from './WeeklyForecast';
 
 // 動態導入地圖組件
 const OSMMap = dynamic(() => import('./OSMMap'), { 
@@ -83,20 +84,18 @@ export default function WeatherDashboard() {
     setMounted(true);
   }, []);
 
-  const forecastDays = useMemo(() => {
-    const days = [];
-    const weekdays = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
-    for (let i = 0; i < 7; i++) {
-       const d = new Date();
-       d.setDate(d.getDate() + i);
-       days.push({
-         date: `${String(d.getMonth() + 1).padStart(2, '0')}/${String(d.getDate()).padStart(2, '0')}`,
-         day: weekdays[d.getDay()],
-         isWeekend: d.getDay() === 0 || d.getDay() === 6
-       });
+  // Helper to get forecast for a specific city, day and slot (0 = day, 1 = night)
+
+  const getWeatherIcon = (wx: string, size = 32, isNight = false) => {
+    if (!wx) return <Cloud className="text-slate-300" size={size} />;
+    if (wx.includes('晴') && !wx.includes('雲') && !wx.includes('雨')) {
+      return isNight ? <Moon className="text-indigo-400" size={size} /> : <Sun className="text-amber-500" size={size} />;
     }
-    return days;
-  }, []);
+    if (wx.includes('雨')) return <CloudRain className="text-blue-400" size={size} />;
+    if (wx.includes('雲') && wx.includes('晴')) return <CloudSun className="text-yellow-200" size={size} />;
+    if (wx.includes('陰') || wx.includes('雲')) return <Cloud className="text-slate-400" size={size} />;
+    return <Cloud className="text-slate-300" size={size} />;
+  };
 
   const chartOptions = {
     backgroundColor: 'transparent',
@@ -278,6 +277,9 @@ export default function WeatherDashboard() {
                     <button key={city.id} onClick={() => setSelectedCity(city)} className={`px-4 py-2 text-[10px] font-black uppercase tracking-wider rounded transition-all ${selectedCity.id === city.id ? (!isDarkMode ? 'bg-[#087f8c] text-white' : 'bg-[#087f8c] text-white') : (!isDarkMode ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800')}`}>{city.name}</button>
                   ))}
                </div>
+
+               <WeatherSummary data={data} isDarkMode={isDarkMode} />
+
                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full">
                   <StatCard value={`${data?.temperature?.toFixed(1) || '--'}°C`} label="即時氣溫" subLabel={selectedCity.name} icon={<Thermometer />} isDarkMode={isDarkMode} accent="#087f8c" />
                   <StatCard value={`${data?.humidity || '--'} %`} label="相對濕度" subLabel="H_LEVEL" icon={<Droplets />} isDarkMode={isDarkMode} accent="#0ea5e9" />
@@ -303,63 +305,7 @@ export default function WeatherDashboard() {
                </div>
             </div>
           ) : activeModule === 'forecast' ? (
-            <div className="w-full space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-               <ModuleTitleBar icon={<Calendar size={24} />} title="一週天氣預報" subTitle="7-DAY SYNOPTIC REPORT" statusText="DATA_SYNC" isDarkMode={isDarkMode} accent="#0ea5e9" />
-               <div className={`p-1 rounded border flex gap-1 items-center w-fit ${!isDarkMode ? 'bg-white border-slate-200' : 'bg-slate-900 border-slate-800'}`}>
-                 {REGIONS.map(r => (
-                   <button key={r.id} onClick={() => setSelectedRegion(r.id)} className={`px-6 py-2 text-xs font-black uppercase tracking-widest rounded transition-all ${selectedRegion === r.id ? (!isDarkMode ? 'bg-blue-600 text-white' : 'bg-blue-500 text-white') : (!isDarkMode ? 'text-slate-600 hover:text-slate-900 hover:bg-slate-100' : 'text-slate-400 hover:text-slate-100 hover:bg-slate-800')}`}>{r.name}</button>
-                 ))}
-               </div>
-               <div className={`rounded border overflow-hidden ${!isDarkMode ? 'bg-white border-slate-200' : 'bg-[#0a121f] border-slate-800'}`}>
-                 <div className="overflow-x-auto">
-                   <table className="w-full text-left border-collapse table-fixed min-w-[1240px]">
-                     <thead>
-                       <tr className={!isDarkMode ? 'bg-slate-100 text-slate-600 border-b border-slate-200' : 'bg-[#0f172a] text-slate-300 border-b border-slate-800'}>
-                         <th className={`w-[140px] p-4 text-xs font-black uppercase sticky left-0 z-10 bg-inherit border-r ${systemBorder}`}>監控站點</th>
-                         <th className={`w-[80px] p-4 text-xs font-black uppercase text-center border-r ${systemBorder}`}>時段</th>
-                         {forecastDays.map(day => (
-                           <th key={day.date} className={`p-4 text-center border-r transition-colors ${systemBorder} ${day.isWeekend ? (!isDarkMode ? 'bg-rose-50 text-rose-600' : 'bg-rose-500/10 text-rose-400') : ''}`}>
-                             <div className="text-[10px] font-bold opacity-60 mb-1">{day.date}</div>
-                             <div className="text-sm font-black">{day.day}</div>
-                           </th>
-                         ))}
-                       </tr>
-                     </thead>
-                     <tbody className={`divide-y ${systemDivider}`}>
-                       {getCitiesInRegion().map(cityName => (
-                         <React.Fragment key={cityName}>
-                           <tr className={`transition-colors ${!isDarkMode ? 'bg-white hover:bg-slate-50' : 'bg-[#050b16] hover:bg-blue-500/5'}`}>
-                             <td rowSpan={2} className={`p-4 font-black text-sm border-r sticky left-0 z-10 ${!isDarkMode ? 'bg-white border-slate-200 text-slate-900' : 'bg-[#050b16] border-slate-800 text-slate-100'}`}>
-                               <div className="flex items-center gap-2">{cityName}<Plus size={12} className="text-slate-400 opacity-20" /></div>
-                             </td>
-                             <td className={`p-4 text-center text-[10px] font-black uppercase border-r ${!isDarkMode ? 'bg-emerald-50/20 text-[#087f8c] border-slate-200' : 'bg-slate-800/10 text-blue-400 border-slate-800'}`}>日間報</td>
-                             {forecastDays.map((day, i) => (
-                               <td key={i} className={`p-6 text-center border-r ${systemBorder} ${day.isWeekend ? (!isDarkMode ? 'bg-rose-50/50' : 'bg-rose-500/5') : ''}`}>
-                                 <div className="flex flex-col items-center gap-2">
-                                   <div className="mb-2">{(i + cityName.length) % 3 === 0 ? <Sun className="text-amber-500" size={32} /> : (i % 2 === 0 ? <CloudSun className="text-yellow-200" size={32} /> : <Cloud className="text-slate-300" size={32} />)}</div>
-                                   <div className="text-sm font-black tabular-nums tracking-tighter">22 - 28°C</div>
-                                 </div>
-                               </td>
-                             ))}
-                           </tr>
-                           <tr className={`transition-colors ${!isDarkMode ? 'bg-white hover:bg-slate-50' : 'bg-[#050b16] hover:bg-blue-500/5'}`}>
-                             <td className={`p-4 text-center text-[12px] font-black uppercase border-r ${!isDarkMode ? 'bg-slate-50/50 text-slate-400 border-slate-200' : 'bg-slate-900/20 text-slate-500 border-slate-800'}`}>夜間</td>
-                             {forecastDays.map((day, i) => (
-                               <td key={i} className={`p-6 text-center border-r ${systemBorder} ${day.isWeekend ? (!isDarkMode ? 'bg-rose-50/50' : 'bg-rose-500/5') : ''}`}>
-                                 <div className="flex flex-col items-center gap-2">
-                                   <Moon className="text-indigo-400 opacity-60" size={20} />
-                                   <div className="text-sm font-bold tabular-nums text-slate-500 tracking-tighter">19 - 24°C</div>
-                                 </div>
-                               </td>
-                             ))}
-                           </tr>
-                         </React.Fragment>
-                       ))}
-                     </tbody>
-                   </table>
-                 </div>
-               </div>
-            </div>
+            <WeeklyForecast isDarkMode={isDarkMode} />
           ) : (
             <div className="w-full space-y-8 animate-in zoom-in-95 duration-500">
                <ModuleTitleBar 
@@ -535,6 +481,75 @@ function ModuleTitleBar({ icon, title, subTitle, statusText, isDarkMode, accent,
             <RefreshCw size={16} />
           </button>
         )}
+      </div>
+    </div>
+  );
+}
+
+function WeatherSummary({ data, isDarkMode }: any) {
+  if (!data) return null;
+
+  const getSummary = () => {
+    const { temperature: t, humidity: h, rainPossibility: r, uvi: u } = data;
+    
+    // Condition logic
+    let condition = "晴朗";
+    let Icon = Sun;
+    let iconColor = "#f59e0b";
+    
+    if (r >= 50 || (r >= 30 && h >= 85)) {
+      condition = "陰雨";
+      Icon = CloudRain;
+      iconColor = "#3b82f6";
+    } else if (r >= 20 || h >= 75) {
+      condition = "多雲";
+      Icon = Cloud;
+      iconColor = "#94a3b8";
+    }
+    
+    // Feeling logic
+    let feeling = "舒適";
+    if (t < 15) feeling = "寒冷";
+    else if (t < 20) feeling = "微涼";
+    else if (t < 25) feeling = "溫和";
+    else if (t >= 28 && h >= 70) feeling = "悶熱";
+    else if (t >= 32) feeling = "酷熱";
+    else if (t >= 28) feeling = "偏熱";
+
+    // Suggestion logic
+    const suggestions = [];
+    if (r >= 40) suggestions.push("出門請記得帶傘。");
+    if (u >= 6) suggestions.push("紫外線強，請注意防曬。");
+    if (t <= 18) suggestions.push("天氣稍涼，建議多穿件外套。");
+    if (t >= 32) suggestions.push("氣溫炎熱，請多補充水分。");
+    if (suggestions.length === 0) suggestions.push("天氣不錯，適合戶外活動。");
+
+    return { 
+      title: `${condition}${feeling}`, 
+      desc: `目前降雨機率 ${r}%，濕度 ${h}%。${suggestions.join(' ')}`,
+      Icon,
+      iconColor
+    };
+  };
+
+  const summary = getSummary();
+
+  return (
+    <div className={`p-6 rounded border flex items-center gap-8 group transition-all w-full ${!isDarkMode ? 'bg-white border-slate-200' : 'bg-slate-900/40 border-slate-800'}`}>
+      <div className="p-5 rounded-full shrink-0 flex items-center justify-center" style={{ backgroundColor: `${summary.iconColor}15`, color: summary.iconColor }}>
+        <summary.Icon size={44} strokeWidth={2.5} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <h2 className={`text-4xl font-black tracking-tighter ${!isDarkMode ? 'text-slate-900' : 'text-slate-50'}`}>
+          {summary.title}
+        </h2>
+        <p className={`mt-2 text-sm font-medium leading-relaxed max-w-2xl ${!isDarkMode ? 'text-slate-500' : 'text-slate-400'}`}>
+          {summary.desc}
+        </p>
+      </div>
+      <div className="hidden lg:flex flex-col items-end gap-1 opacity-20 group-hover:opacity-40 transition-opacity">
+        <div className="text-[10px] font-black uppercase tracking-[0.3em]">INTELLIGENCE_REPORT</div>
+        <div className="text-[8px] font-black uppercase tracking-widest tabular-nums">DATA_HASH: {Math.random().toString(16).slice(2, 10).toUpperCase()}</div>
       </div>
     </div>
   );
