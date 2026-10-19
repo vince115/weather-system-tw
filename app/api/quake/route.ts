@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 
 const CWA_QUAKE_URL = 'https://opendata.cwa.gov.tw/api/v1/rest/datastore/E-A0015-001';
-const BACKUP_API_KEY = 'CWA-4C7F7F6C-CAC7-4E23-842A-B920016384BD';
 
 export async function GET() {
-  const apiKey = process.env.CWA_API_KEY || BACKUP_API_KEY;
+  const apiKey = process.env.CWA_API_KEY;
+
+  if (!apiKey) {
+    return NextResponse.json({ error: 'MISSING_API_KEY' }, { status: 401 });
+  }
 
   try {
     const res = await fetch(`${CWA_QUAKE_URL}?Authorization=${apiKey}&format=JSON&limit=10`, {
